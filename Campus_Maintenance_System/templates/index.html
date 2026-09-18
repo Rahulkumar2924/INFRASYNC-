@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Infrasync - Campus Support & Operations Hub</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Cabinet+Grotesk:wght@800;900&display=swap');
+
+    :root {
+      --color-blue-popsicle: #0f2862;
+      --color-redline: #9e363a;
+      --color-purple-shadow: #091f36;
+      --color-grey-blue-leaf: #4f5f76;
+
+      --bg-canvas: #091f36;
+      --bg-surface: #0c2347;
+      --bg-card: rgba(15, 40, 98, 0.42);
+      --bg-elevated: #0f2862;
+      --border-subtle: rgba(79, 95, 118, 0.35);
+      --border-accent: rgba(158, 54, 58, 0.45);
+
+      --accent-redline: #9e363a;
+      --accent-redline-glow: rgba(158, 54, 58, 0.4);
+      --accent-blue: #2554c7;
+      --accent-blue-glow: rgba(15, 40, 98, 0.6);
+
+      --text-main: #ffffff;
+      --text-frost: #f0f4f8;
+      --text-muted: #8ea1b8;
+      --text-leaf: #a4b3c6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 16px;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(15, 40, 98, 0.38) 0px, transparent 55%),
+        radial-gradient(at 100% 100%, rgba(158, 54, 58, 0.16) 0px, transparent 50%),
+        linear-gradient(to right, rgba(79, 95, 118, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(79, 95, 118, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      overflow-x: hidden;
+    }
+
+    /* --- TOAST NOTIFICATIONS --- */
+    #toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 100000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      min-width: 300px;
+      max-width: 420px;
+      background: rgba(12, 35, 71, 0.95);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--accent-redline);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      font-size: 0.92rem;
+      animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .toast.success { border-left-color: #34D399; }
+    .toast.error { border-left-color: #f87171; }
+    .toast-icon { font-size: 1.3rem; }
+    .toast-msg { flex: 1; line-height: 1.4; }
+
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* --- FLOATING ACTION BUTTON --- */
+    .fab-report {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--color-redline), #b53e43);
+      color: #ffffff;
+      border: 1px solid var(--border-accent);
+      padding: 14px 22px;
+      border-radius: 50px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(158, 54, 58, 0.55);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    }
+    .fab-report:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 16px 36px rgba(158, 54, 58, 0.75);
+    }
+    .fab-report-icon { font-size: 1.25rem; }
+
+    /* --- WELCOME INTRO SPLASH SCREEN --- */
+    #welcome-splash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #0c2347 0%, #091f36 100%);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+    }
+
+    .splash-box {
+      text-align: center;
+      position: relative;
+      animation: splashScaleUp 1s ease forwards;
+    }
+
+    @keyframes splashScaleUp {
+      from { opacity: 0; transform: scale(0.85); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .splash-badge {
+      display: inline-block;
+      background: rgba(158, 54, 58, 0.2);
+      border: 1px solid var(--border-accent);
+      color: #fca5a5;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      padding: 6px 18px;
+      border-radius: 30px;
+      margin-bottom: 1.2rem;
+      text-transform: uppercase;
+    }
+
+    .splash-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.2rem;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--color-redline), #bd4448);
+      color: #fff;
+      font-size: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 35px var(--accent-redline-glow);
+      animation: pulseGlow 2s infinite alternate ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 25px rgba(158, 54, 58, 0.4); transform: scale(1); }
+      100% { box-shadow: 0 0 45px rgba(158, 54, 58, 0.8); transform: scale(1.06); }
+    }
+
+    .splash-title {
+      font-family: 'Cabinet Grotesk', sans-serif;
+      font-size: 3.2rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #fff;
+      margin-bottom: 0.4rem;
+    }
+
+    .splash-title span { color: #f87171; }
+
+    .splash-subtitle {
+      color: var(--text-leaf);
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2rem;
+    }
+
+    .splash-progress-track {
+      width: 260px;
+      height: 4px;
+      background: rgba(79, 95, 118, 0.3);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 0 auto 1.2rem;
+      position: relative;
+    }
+
+    .splash-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #9e363a, #f87171);
+      box-shadow: 0 0 10px #f87171;
+      border-radius: 8px;
+      animation: loadFill 2s cubic-bezier(0.1, 0.5, 0.1, 1) forwards;
+    }
+
+    @keyframes loadFill {
+      0% { width: 0%; }
+      50% { width: 65%; }
+      100% { width: 100%; }
+    }
+
+    .splash-status {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    /* --- CLEAN EXPANDED HEADER --- */
+    header {
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(9, 31, 54, 0.94);
+      backdrop-filter: blur(16px);
+      position: sticky; top: 0; z-index: 100;
+      padding: 1.1rem clamp(1.8rem, 5vw, 5.5rem);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .brand-wrap { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      background: linear-gradient(135deg, var(--color-redline), #bd4448);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 1.3rem;
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 20px var(--accent-redline-glow);
+    }
+    .brand-title { font-size: 1.5rem; font-weight: 900; letter-spacing: -0.5px; color: #fff; }
+    .brand-title span { color: #f87171; }
+    .brand-tag { font-size: 0.68rem; color: var(--text-leaf); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
+
+    nav.pill-bar {
+      display: flex;
+      background: var(--bg-surface);
+      padding: 5px;
+      border-radius: 35px;
+      border: 1px solid var(--border-subtle);
+      gap: 4px;
+    }
+    nav.pill-bar button {
+      background: transparent; border: none;
+      color: var(--text-frost);
+      padding: 8px 20px; border-radius: 25px;
+      cursor: pointer; font-weight: 700; font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+    nav.pill-bar button.active {
+      background: var(--color-blue-popsicle);
+      color: #ffffff;
+      border: 1px solid rgba(142, 161, 184, 0.3);
+      box-shadow: 0 0 16px var(--accent-blue-glow);
+    }
+
+    .auth-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-action {
+      background: linear-gradient(135deg, var(--color-redline), #b53e43);
+      color: #ffffff; font-weight: 800; font-size: 0.95rem;
+      border: none; padding: 10px 22px; border-radius: 30px;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 16px var(--accent-redline-glow);
+    }
+    .btn-action:hover { transform: translateY(-2px); box-shadow: 0 0 24px rgba(158, 54, 58, 0.6); }
+
+    .btn-auth {
+      background: rgba(79, 95, 118, 0.2);
+      color: var(--text-frost); border: 1px solid var(--border-subtle);
+      font-weight: 700; font-size: 0.9rem;
+      padding: 9px 18px; border-radius: 20px; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-auth:hover { background: rgba(79, 95, 118, 0.35); border-color: rgba(142, 161, 184, 0.5); }
+
+    .user-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .user-pill span.role-badge {
+      background: var(--color-redline);
+      color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; text-transform: uppercase; font-weight: 900;
+    }
+
+    /* --- CLEAN SCREEN-FILLING LAYOUT --- */
+    main { 
+      max-width: 1560px; 
+      width: 100%; 
+      margin: 0 auto; 
+      padding: clamp(2rem, 4vh, 4rem) clamp(1.8rem, 4.5vw, 5.5rem); 
+      flex-grow: 1; 
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .section-tab { display: none; }
+    .section-tab.active { display: block; animation: tabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes tabFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero-container {
+      display: grid; 
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center; 
+      gap: clamp(2.5rem, 5.5vw, 6rem);
+      width: 100%;
+    }
+
+    .hero-badge {
+      display: inline-flex; 
+      align-items: center; 
+      gap: 10px;
+      background: rgba(158, 54, 58, 0.15); 
+      color: #fca5a5;
+      border: 1px solid var(--border-accent);
+      padding: 9px 20px; 
+      border-radius: 28px; 
+      font-size: 0.88rem;
+      font-weight: 800; 
+      letter-spacing: 1.8px; 
+      margin-bottom: 2rem;
+      width: fit-content;
+    }
+    .hero-dot { width: 8px; height: 8px; background: #f87171; border-radius: 50%; box-shadow: 0 0 10px #f87171; }
+    
+    .hero-heading {
+      font-family: 'Cabinet Grotesk', sans-serif;
+      font-size: clamp(3.2rem, 5.2vw, 4.8rem);
+      font-weight: 900; 
+      line-height: 1.05;
+      letter-spacing: -1.2px; 
+      text-transform: uppercase; 
+      margin-bottom: 2.2rem;
+    }
+    .hero-heading span.neon { color: #f87171; text-shadow: 0 0 30px var(--accent-redline-glow); }
+    
+    .hero-desc { 
+      font-size: clamp(1.05rem, 1.25vw, 1.2rem); 
+      color: var(--text-leaf); 
+      line-height: 1.75; 
+      max-width: 660px; 
+      margin-bottom: 2.8rem; 
+    }
+    
+    .hero-btns { 
+      display: flex; 
+      gap: 18px; 
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-redline), #b53e43); color: #ffffff; font-weight: 800;
+      font-size: 1.1rem; border: none; padding: 15px 32px; border-radius: 12px;
+      cursor: pointer; box-shadow: 0 0 22px var(--accent-redline-glow);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(158, 54, 58, 0.7); }
+    .btn-ghost {
+      background: rgba(79, 95, 118, 0.15); color: var(--text-frost);
+      border: 1px solid var(--border-subtle); font-weight: 700;
+      font-size: 1.1rem; padding: 15px 32px; border-radius: 12px; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 95, 118, 0.3); border-color: var(--text-leaf); color: #fff; }
+
+    /* Interactive Map Graphic */
+    .map-canvas {
+      position: relative; 
+      height: clamp(440px, 50vh, 520px); 
+      width: 100%;
+      border: 1px solid var(--border-subtle); 
+      border-radius: 22px;
+      background: var(--bg-card); 
+      backdrop-filter: blur(14px);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+    }
+    .svg-lines { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+    .ticket-badge {
+      position: absolute; background: #0c2347; color: #fff;
+      border: 1px solid var(--border-subtle);
+      padding: 12px 18px; border-radius: 12px;
+      box-shadow: 0 16px 30px rgba(0,0,0,0.55);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .badge-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .badge-dot.red { background: #f87171; box-shadow: 0 0 8px #f87171; }
+    .badge-dot.blue { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+    .badge-dot.leaf { background: var(--color-grey-blue-leaf); }
+    .pos-1 { top: 60px; left: 20px; }
+    .pos-2 { top: 30px; right: 35px; }
+    .pos-3 { top: 210px; right: 20px; }
+    .pos-4 { bottom: 50px; left: 40px; }
+
+    /* Card Panels */
+    .card-form {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(20px);
+      border-radius: 20px; padding: 3rem; max-width: 820px;
+      margin: 1.5rem auto; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .full-width { grid-column: span 2; }
+    label { display: block; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.2px; color: #fca5a5; margin-bottom: 8px; font-weight: 800; }
+    input, select, textarea {
+      width: 100%; background: #081a2e; border: 1px solid var(--border-subtle);
+      color: #fff; padding: 13px 15px; border-radius: 10px; font-size: 1rem; outline: none;
+      transition: all 0.2s ease;
+    }
+    select optgroup { background: #0c2347; color: #fca5a5; font-weight: 800; }
+    select option { background: #081a2e; color: #fff; }
+    input:focus, select:focus, textarea:focus { border-color: #f87171; box-shadow: 0 0 12px var(--accent-redline-glow); }
+
+    /* Image Dropzone & Preview */
+    .dropzone-box {
+      border: 2px dashed rgba(158, 54, 58, 0.45);
+      border-radius: 14px;
+      padding: 1.5rem;
+      text-align: center;
+      background: rgba(158, 54, 58, 0.04);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .dropzone-box:hover {
+      border-color: #f87171;
+      background: rgba(158, 54, 58, 0.08);
+    }
+    .preview-container {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      background: rgba(12, 35, 71, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .preview-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-remove-photo {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-left: auto;
+      font-weight: 700;
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 40px #081a2e inset !important;
+      -webkit-text-fill-color: #ffffff !important;
+      caret-color: #ffffff !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+
+    /* Tables */
+    .table-container { 
+      background: var(--bg-card); 
+      border: 1px solid var(--border-subtle); 
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px; 
+      overflow: hidden; 
+      margin-top: 1.8rem; 
+      backdrop-filter: blur(16px);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th { background: #081a2e; padding: 16px 20px; color: #fca5a5; border-bottom: 1px solid var(--border-subtle); text-transform: uppercase; font-weight: 800; font-size: 0.82rem; letter-spacing: 0.8px; }
+    td { padding: 16px 20px; border-bottom: 1px solid rgba(79, 95, 118, 0.16); color: var(--text-frost); }
+
+    /* Pulsing Live Badges */
+    .status-badge { 
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px; 
+      border-radius: 20px; 
+      font-size: 0.82rem; 
+      font-weight: 800; 
+    }
+    .status-dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-Pending { background: rgba(158, 54, 58, 0.2); color: #fca5a5; border: 1px solid rgba(158, 54, 58, 0.45); }
+    .status-Pending .status-dot-pulse { background: #f87171; box-shadow: 0 0 8px #f87171; animation: pulseDot 1.4s infinite; }
+
+    .status-InProgress { background: rgba(37, 84, 199, 0.2); color: #93c5fd; border: 1px solid rgba(37, 84, 199, 0.45); }
+    .status-InProgress .status-dot-pulse { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; animation: pulseDot 1.4s infinite; }
+
+    .status-Resolved { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.45); }
+    .status-Resolved .status-dot-pulse { background: #34D399; box-shadow: 0 0 8px #34D399; }
+
+    @keyframes pulseDot {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    .img-preview-btn {
+      background: rgba(79, 95, 118, 0.25); color: var(--text-frost);
+      border: 1px solid var(--border-subtle); padding: 5px 10px;
+      border-radius: 8px; font-size: 0.82rem; cursor: pointer; font-weight: 700;
+    }
+    .img-preview-btn:hover { background: rgba(79, 95, 118, 0.45); }
+
+    /* Star Rating */
+    .star-btn {
+      font-size: 2.2rem;
+      cursor: pointer;
+      color: #2b3e58;
+      transition: transform 0.15s ease, color 0.15s ease;
+      user-select: none;
+    }
+    .star-btn:hover { transform: scale(1.2); }
+    .star-btn.active {
+      color: #fca5a5;
+      text-shadow: 0 0 12px var(--accent-redline-glow);
+    }
+    .btn-feedback {
+      background: rgba(158, 54, 58, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(158, 54, 58, 0.4);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-feedback:hover { background: rgba(158, 54, 58, 0.35); }
+
+    .btn-delete-ticket {
+      background: rgba(158, 54, 58, 0.25);
+      color: #fca5a5;
+      border: 1px solid rgba(158, 54, 58, 0.5);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-delete-ticket:hover {
+      background: rgba(158, 54, 58, 0.45);
+      border-color: #f87171;
+    }
+
+    /* Reports & Analytics */
+    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 2.2rem; }
+    .metric-card { 
+      background: var(--bg-card); 
+      border: 1px solid var(--border-subtle); 
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px; 
+      padding: 1.6rem; 
+      backdrop-filter: blur(16px);
+    }
+    .metric-val { font-size: 2.3rem; font-weight: 900; color: #fff; margin: 4px 0; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; }
+    .chart-box { 
+      background: var(--bg-card); 
+      border: 1px solid var(--border-subtle); 
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px; 
+      padding: 1.8rem; 
+      min-height: 300px; 
+      backdrop-filter: blur(16px);
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(9, 31, 54, 0.9); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-box {
+      background: #0c2347; border: 1px solid var(--border-subtle);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px; padding: 2.5rem; width: 100%; max-width: 520px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.65);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .link-helper {
+      color: #fca5a5; font-size: 0.85rem; text-decoration: none; cursor: pointer;
+    }
+    .link-helper:hover { text-decoration: underline; }
+
+    @media (max-width: 1024px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        padding-top: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- FLOATING REPORT ISSUE BUTTON -->
+  <button class="fab-report" onclick="handleReportIssueClick()">
+    <span class="fab-report-icon">⚠️</span>
+    <span>Report Issue</span>
+  </button>
+
+  <!-- WELCOME INTRO ANIMATION SCREEN -->
+  <div id="welcome-splash">
+    <div class="splash-box">
+      <div class="splash-badge">WELCOME TO INFRASYNC</div>
+      <div class="splash-icon">⚡</div>
+      <h1 class="splash-title">Infra<span>sync</span></h1>
+      <p class="splash-subtitle">Campus Support & Operations Hub</p>
+      <div class="splash-progress-track">
+        <div class="splash-progress-bar"></div>
+      </div>
+      <p class="splash-status" id="splash-status-text">INITIALIZING INFRASTRUCTURE PORTAL...</p>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand-wrap">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <h2 class="brand-title">Infra<span>sync</span></h2>
+        <p class="brand-tag">CAMPUS SUPPORT & OPERATIONS HUB</p>
+      </div>
+    </div>
+    
+    <nav class="pill-bar">
+      <button class="nav-link active" onclick="showTab('dashboard')">Home</button>
+      <button class="nav-link" id="nav-register" onclick="showTab('register')">Register Ticket</button>
+      <button class="nav-link" id="nav-tickets" onclick="showTab('tickets')">Tickets Board</button>
+      <button class="nav-link" id="nav-reports" onclick="showTab('reports')" style="display:none;">Reports (Admin)</button>
+    </nav>
+
+    <div class="auth-actions">
+      <div id="unauth-menu">
+        <button class="btn-auth" onclick="openStudentLogin()">Student Login</button>
+        <button class="btn-action" onclick="openModal('register')">Student Sign Up</button>
+      </div>
+      <div id="auth-menu" style="display:none; align-items:center; gap:12px;">
+        <div class="user-pill">
+          <span id="user-display-name">User</span>
+          <span class="role-badge" id="user-display-role">Student</span>
+        </div>
+        <button class="btn-auth" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO TAB -->
+    <section id="dashboard" class="section-tab active">
+      <div class="hero-container">
+        <div>
+          <div class="hero-badge"><span class="hero-dot"></span> WELCOME TO INFRASYNC · LIVE HUB</div>
+          <h1 class="hero-heading">
+            CAMPUS ISSUES <span class="neon">—</span><br>
+            LOGGED, MONITORED,<br>
+            RESOLVED.
+          </h1>
+          <p class="hero-desc">Students report infrastructure breakdowns with photographic evidence and 6-digit Scholar Numbers, while administrators track tickets, resolve issues, and monitor satisfaction ratings.</p>
+          <div class="hero-btns">
+            <button class="btn-primary" onclick="checkRoleToAct()">Launch Portal</button>
+            <button class="btn-ghost" onclick="openAdminModal()">Admin / Owner Portal</button>
+          </div>
+        </div>
+
+        <div class="map-canvas">
+          <svg class="svg-lines">
+            <line x1="160" y1="110" x2="260" y2="170" stroke="rgba(158, 54, 58, 0.4)" stroke-width="2" stroke-dasharray="5 5" />
+            <line x1="260" y1="170" x2="350" y2="90" stroke="rgba(79, 95, 118, 0.4)" stroke-width="2" stroke-dasharray="5 5" />
+            <line x1="260" y1="170" x2="380" y2="230" stroke="rgba(37, 84, 199, 0.45)" stroke-width="2" stroke-dasharray="5 5" />
+            <line x1="260" y1="170" x2="220" y2="390" stroke="rgba(158, 54, 58, 0.4)" stroke-width="2" stroke-dasharray="5 5" />
+            <circle cx="260" cy="170" r="5" fill="#f87171" />
+            <circle cx="260" cy="170" r="12" fill="none" stroke="#f87171" stroke-width="2" stroke-opacity="0.45" />
+          </svg>
+          <div class="ticket-badge pos-1"><span class="badge-dot red"></span><div><h4>B.Tech Block</h4><p style="color:var(--text-leaf); font-size:0.85rem;">Fan malfunction</p></div></div>
+          <div class="ticket-badge pos-2"><span class="badge-dot blue"></span><div><h4>Sports Complex</h4><p style="color:var(--text-leaf); font-size:0.85rem;">Lighting issue</p></div></div>
+          <div class="ticket-badge pos-3"><span class="badge-dot leaf"></span><div><h4>Auditorium</h4><p style="color:var(--text-leaf); font-size:0.85rem;">Audio amplifier fault</p></div></div>
+          <div class="ticket-badge pos-4"><span class="badge-dot red"></span><div><h4>Boys Hostel</h4><p style="color:var(--text-leaf); font-size:0.85rem;">Water pipeline repair</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTER TICKET -->
+    <section id="register" class="section-tab">
+      <div class="card-form">
+        <h2 style="font-size: 1.9rem; font-weight: 900; margin-bottom: 0.5rem; color:#fff;">SUBMIT MAINTENANCE COMPLAINT</h2>
+        <p style="color: var(--text-leaf); font-size: 0.95rem; margin-bottom: 1.8rem;">Logged Student: <b id="reg-student-info" style="color:#fca5a5">Student Info</b></p>
+        <form id="ticketForm" onsubmit="handleRegisterComplaint(event)" class="form-grid" enctype="multipart/form-data">
+          <div>
+            <label>Campus Location</label>
+            <select id="building" required>
+              <option value="" disabled selected>Select Campus Location...</option>
+              <option value="B.Tech Block">B.Tech Block</option>
+              <option value="Computer Applications & IT Block">Computer Applications & IT Block</option>
+              <option value="Science and Pharmacy Block">Science and Pharmacy Block</option>
+              <option value="Management Studies">Management Studies</option>
+              <option value="Boys Hostel">Boys Hostel</option>
+              <option value="Girls Hostel">Girls Hostel</option>
+              <option value="Administration Block">Administration Block</option>
+              <option value="Auditorium">Auditorium</option>
+              <option value="Sports Complex">Sports Complex</option>
+              <option value="Canteen">Canteen</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Room / Hall / Lab No.</label>
+            <input type="text" id="room" placeholder="e.g. 204 or Lab 3" required>
+          </div>
+
+          <div>
+            <label>Issue Category</label>
+            <select id="cat" required>
+              <option value="Electrical">Electrical (Lights, Fans, Power Sockets)</option>
+              <option value="Furniture">Furniture (Desks, Chairs, Podiums)</option>
+              <option value="Plumbing">Plumbing (Washroom, Tap, Water Filter)</option>
+              <option value="IT">IT / Equipment (Projector, Desktop, Smart Board)</option>
+              <option value="Internet">Internet / Wi-Fi Connectivity</option>
+              <option value="Cleaning">Cleaning & Sanitation</option>
+              <option value="AC/Cooling">Air Conditioning / Cooling (HVAC)</option>
+              <option value="Other">Other Civil/Facility Work</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Priority</label>
+            <select id="priority" required>
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+
+          <!-- Drag-and-Drop Image Uploader with Instant Preview -->
+          <div class="full-width">
+            <label>Upload Problem Photo (Optional)</label>
+            <div class="dropzone-box" onclick="document.getElementById('problem-image').click()" id="dropzone">
+              <input type="file" id="problem-image" accept="image/*" style="display:none;" onchange="handleFileSelected(event)">
+              <div style="font-size:2rem; margin-bottom:6px;">📸</div>
+              <p style="font-weight:700; color:var(--text-frost); font-size:0.95rem;">Click or drag photo here to upload</p>
+              <small style="color:var(--text-muted);">Supports PNG, JPG, JPEG, WEBP</small>
+            </div>
+
+            <div class="preview-container" id="preview-box">
+              <img id="preview-img" class="preview-thumb" src="" alt="Thumbnail">
+              <div>
+                <p id="preview-name" style="font-weight:700; font-size:0.9rem; color:#fff;"></p>
+                <small id="preview-size" style="color:var(--text-muted);"></small>
+              </div>
+              <button type="button" class="btn-remove-photo" onclick="clearPhotoSelection()">Remove</button>
+            </div>
+          </div>
+
+          <div class="full-width"><label>Problem Description</label><textarea id="problem" rows="3" placeholder="Describe what's wrong..." required></textarea></div>
+          <div class="full-width"><button type="submit" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.05rem;">Submit Ticket to Maintenance Queue</button></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TICKETS BOARD -->
+    <section id="tickets" class="section-tab">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-weight: 900; font-size: 1.9rem; color:#fff;" id="board-title">Incident Queue</h2>
+          <p style="color:var(--text-leaf); font-size:0.92rem;" id="board-desc">Track status and updates</p>
+        </div>
+        <input type="text" id="searchBox" placeholder="Search by Ticket ID..." style="width: 280px;" onkeyup="filterTickets()">
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Applicant Details</th>
+              <th>Location & Room</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Photo</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th id="th-action">Action / Feedback</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- REPORTS TAB (ADMIN ONLY) -->
+    <section id="reports" class="section-tab">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+          <h2 style="font-weight: 900; font-size: 1.9rem; color:#fff;">ADMINISTRATIVE CONTROL ROOM</h2>
+          <p style="color: var(--text-leaf); font-size: 0.95rem;">Campus-wide aggregate metrics calculated dynamically using Pandas</p>
+        </div>
+        <a href="/api/export_csv" class="btn-primary" style="text-decoration:none; padding: 12px 24px; font-size: 0.92rem;">Export Complete CSV Dataset</a>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card"><label>Total Tickets</label><div class="metric-val" id="m-total">0</div></div>
+        <div class="metric-card"><label>Pending</label><div class="metric-val" style="color:#fca5a5;" id="m-pending">0</div></div>
+        <div class="metric-card"><label>In Progress</label><div class="metric-val" style="color:#93c5fd;" id="m-inprog">0</div></div>
+        <div class="metric-card"><label>Resolved</label><div class="metric-val" style="color:#86efac;" id="m-resolved">0</div></div>
+        <div class="metric-card"><label>Campus Satisfaction</label><div class="metric-val" style="color:#fca5a5;" id="m-rating">N/A</div></div>
+        <div class="metric-card"><label>Primary Category</label><div class="metric-val" style="font-size:1.5rem; color:#fff;" id="m-cat">None</div></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-box"><canvas id="catChart"></canvas></div>
+        <div class="chart-box"><canvas id="statusChart"></canvas></div>
+        <div class="chart-box"><canvas id="bldChart"></canvas></div>
+        <div class="chart-box"><canvas id="monthChart"></canvas></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+
+  <!-- Student Login Modal -->
+  <div class="modal-overlay" id="modal-student-login">
+    <div class="modal-box">
+      <h2 style="font-weight:900; margin-bottom:0.4rem; color:#fff;">Student Sign In</h2>
+      <p style="color:var(--text-leaf); font-size:0.88rem; margin-bottom:1.5rem;">Access your personal complaint tracking board</p>
+      <form onsubmit="handleStudentLoginSubmit(event)">
+        <div style="margin-bottom:1.2rem;">
+          <label>Scholar Number or Email</label>
+          <input type="text" id="student-login-identifier" placeholder="e.g. 260478 or rahul@gmail.com" required>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="margin:0;">Password</label>
+            <span class="link-helper" onclick="openForgotPasswordModal()">Forgot Password?</span>
+          </div>
+          <input type="password" id="student-login-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; padding:14px;">Sign In as Student</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div class="modal-overlay" id="modal-forgot-password">
+    <div class="modal-box">
+      <h2 style="font-weight:900; margin-bottom:0.4rem; color:#fff;">Reset Password</h2>
+      <p style="color:var(--text-leaf); font-size:0.88rem; margin-bottom:1.5rem;">Verify your email via OTP to set a new password</p>
+      
+      <form id="form-forgot-request" onsubmit="handleRequestResetOtp(event)">
+        <div style="margin-bottom:1rem;">
+          <label>Scholar Number</label>
+          <input type="text" id="reset-scholar-no" placeholder="6-digit number" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required>
+        </div>
+        <div style="margin-bottom:1.4rem;">
+          <label>Registered Email</label>
+          <input type="email" id="reset-email" placeholder="e.g. rahul@gmail.com" required>
+        </div>
+        <button type="submit" id="btn-request-reset" class="btn-primary" style="width:100%; padding:14px;">Send Reset OTP</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="openStudentLogin()">Back to Login</button>
+      </form>
+
+      <form id="form-forgot-verify" onsubmit="handleFinalizeReset(event)" style="display:none;">
+        <div style="margin-bottom:1rem;">
+          <label>6-Digit OTP Code</label>
+          <input type="text" id="reset-otp-input" placeholder="• • • • • •" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required style="font-size:1.4rem; text-align:center; letter-spacing:6px; font-weight:800; color:#fca5a5;">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label>New Password</label>
+          <input type="password" id="reset-new-password" placeholder="Enter new password" required>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label>Confirm New Password</label>
+          <input type="password" id="reset-confirm-new-password" placeholder="Re-enter new password" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; padding:14px;">Update Password & Sign In</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="resetForgotModal()">Back</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div class="modal-overlay" id="modal-admin-login">
+    <div class="modal-box" style="border-color: var(--border-accent);">
+      <h2 style="font-weight:900; margin-bottom:0.4rem; color: #fca5a5;">College Administrator Portal</h2>
+      <p style="color:var(--text-leaf); font-size:0.88rem; margin-bottom:1.5rem;">Authorized personnel login for central campus control</p>
+      <form onsubmit="handleAdminLoginSubmit(event)">
+        <div style="margin-bottom:1.2rem;">
+          <label>Admin Official Email</label>
+          <input type="email" id="admin-login-email" placeholder="admin@campus.edu" required>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label>Master Password</label>
+          <input type="password" id="admin-login-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; padding:14px;">Access Central Dashboard</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Student Sign Up Modal -->
+  <div class="modal-overlay" id="modal-register">
+    <div class="modal-box">
+      <h2 style="font-weight:900; margin-bottom:0.4rem; color:#fff;">Student Registration</h2>
+      <p style="color:var(--text-leaf); font-size:0.88rem; margin-bottom:1.4rem;">Enter details to receive an email verification OTP</p>
+      <form onsubmit="handleInitiateSignup(event)" autocomplete="off">
+        <div style="margin-bottom:0.9rem;">
+          <label>Full Name</label>
+          <input type="text" id="signup-name" placeholder="e.g. Rahul Kumar" autocomplete="off" required>
+        </div>
+        <div style="margin-bottom:0.9rem;">
+          <label>Email (For OTP Verification)</label>
+          <input type="email" id="signup-email" placeholder="e.g. rahul@gmail.com" autocomplete="new-email" required>
+        </div>
+        <div style="margin-bottom:0.9rem;">
+          <label>Scholar Number</label>
+          <input type="text" id="signup-scholar-no" placeholder="6-digit number (e.g. 260478)" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="off" required>
+        </div>
+
+        <div style="margin-bottom:0.9rem;">
+          <label>Course & Department</label>
+          <select id="signup-dept" required>
+            <option value="" disabled selected>Select Course & Department</option>
+            <optgroup label="B.Tech - Computer Science & Engineering">
+              <option value="B.Tech CSE (Core)">B.Tech CSE (Core)</option>
+              <option value="B.Tech CSE (AIML)">B.Tech CSE (AIML)</option>
+              <option value="B.Tech CSE (AI)">B.Tech CSE (AI)</option>
+              <option value="B.Tech CSE (Cyber Security)">B.Tech CSE (Cyber Security)</option>
+              <option value="B.Tech CSE (Data Science)">B.Tech CSE (Data Science)</option>
+              <option value="B.Tech CSE (Cloud Computing)">B.Tech CSE (Cloud Computing)</option>
+              <option value="B.Tech CSE (IoT)">B.Tech CSE (IoT)</option>
+            </optgroup>
+            <optgroup label="B.Tech - Electronics & Communication Engineering">
+              <option value="B.Tech ECE (Core)">B.Tech ECE (Core)</option>
+              <option value="B.Tech ECE (VLSI & Embedded)">B.Tech ECE (VLSI & Embedded)</option>
+              <option value="B.Tech ECE (Robotics & Automation)">B.Tech ECE (Robotics & Automation)</option>
+            </optgroup>
+            <optgroup label="B.Tech - Mechanical Engineering">
+              <option value="B.Tech ME (Core)">B.Tech ME (Core)</option>
+              <option value="B.Tech ME (Automobile)">B.Tech ME (Automobile)</option>
+            </optgroup>
+            <optgroup label="B.Tech - Civil Engineering">
+              <option value="B.Tech CE (Core)">B.Tech CE (Core)</option>
+              <option value="B.Tech CE (Structural)">B.Tech CE (Structural)</option>
+            </optgroup>
+            <optgroup label="B.Tech - Electrical & Electronics Engineering">
+              <option value="B.Tech EEE (Core)">B.Tech EEE (Core)</option>
+              <option value="B.Tech EEE (Electric Vehicles)">B.Tech EEE (Electric Vehicles)</option>
+            </optgroup>
+            <optgroup label="Computer Applications & IT (BCA / MCA)">
+              <option value="BCA (Core)">BCA (Core)</option>
+              <option value="BCA (AI & Data Science)">BCA (AI & Data Science)</option>
+              <option value="MCA (Core)">MCA (Core)</option>
+            </optgroup>
+            <optgroup label="Management Studies (BBA / MBA)">
+              <option value="BBA (General)">BBA (General)</option>
+              <option value="BBA (Business Analytics)">BBA (Business Analytics)</option>
+              <option value="MBA (HR Management)">MBA (HR Management)</option>
+              <option value="MBA (Marketing)">MBA (Marketing)</option>
+            </optgroup>
+            <optgroup label="Sciences & Pharmacy">
+              <option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option>
+              <option value="B.Pharm (Pharmacy)">B.Pharm (Pharmacy)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div style="margin-bottom:0.9rem;">
+          <label>Password</label>
+          <input type="password" id="signup-password" placeholder="e.g. Pass@123" autocomplete="new-password" required>
+        </div>
+        <div style="margin-bottom:1.4rem;">
+          <label>Confirm Password</label>
+          <input type="password" id="signup-confirm-password" placeholder="e.g. Pass@123" autocomplete="new-password" required>
+        </div>
+        <button type="submit" id="btn-signup-submit" class="btn-primary" style="width:100%; padding:14px;">Send Verification OTP</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Registration OTP Verification Modal -->
+  <div class="modal-overlay" id="modal-otp-verify">
+    <div class="modal-box" style="text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:0.5rem;">📩</div>
+      <h2 style="font-weight:900; margin-bottom:0.4rem; color:#fff;">Verify Your Email</h2>
+      <p style="color:var(--text-leaf); font-size:0.9rem; margin-bottom:1.5rem;">
+        Enter the 6-digit verification code sent to <b id="otp-target-email" style="color:#fca5a5">your email</b>
+      </p>
+      <form onsubmit="handleVerifyOtp(event)">
+        <div style="margin-bottom:1.5rem;">
+          <input type="text" id="otp-input" placeholder="• • • • • •" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required style="font-size:1.8rem; text-align:center; letter-spacing:8px; font-weight:800; color:#fca5a5;">
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%; padding:14px;">Verify & Activate Account</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="openModal('register')">Back / Change Details</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Student Feedback Modal -->
+  <div class="modal-overlay" id="modal-feedback">
+    <div class="modal-box" style="text-align: center;">
+      <h2 style="font-weight:900; margin-bottom:0.3rem; color:#fca5a5;">Service Feedback</h2>
+      <p style="color:var(--text-leaf); font-size:0.88rem; margin-bottom:1.4rem;">
+        Rate the resolution of ticket <b id="feedback-ticket-id" style="color:#fff;">CMP001</b>
+      </p>
+
+      <form onsubmit="handleSendFeedback(event)">
+        <input type="hidden" id="feedback-cmp-id">
+        
+        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:1.5rem;" id="star-rating-container">
+          <span class="star-btn active" onclick="setRating(1)">★</span>
+          <span class="star-btn active" onclick="setRating(2)">★</span>
+          <span class="star-btn active" onclick="setRating(3)">★</span>
+          <span class="star-btn active" onclick="setRating(4)">★</span>
+          <span class="star-btn active" onclick="setRating(5)">★</span>
+        </div>
+        <input type="hidden" id="selected-rating-val" value="5">
+
+        <div style="margin-bottom:1.5rem; text-align:left;">
+          <label>Comments / Experience (Optional)</label>
+          <textarea id="feedback-comment" rows="3" placeholder="Was the issue fixed to your satisfaction?"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:100%; padding:14px;">Submit Feedback</button>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:10px;" onclick="closeModals()">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div class="modal-overlay" id="modal-image-view" onclick="closeModals()">
+    <div class="modal-box" style="max-width: 650px; text-align:center; padding: 1.5rem;" onclick="event.stopPropagation()">
+      <h3 style="margin-bottom: 1rem; color: #fca5a5;">Evidence Photo</h3>
+      <img id="lightbox-img" src="" alt="Issue Preview" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid var(--border-subtle);">
+      <button type="button" class="btn-ghost" style="width:100%; margin-top:1rem;" onclick="closeModals()">Close Preview</button>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let pendingVerificationEmail = "";
+    let pendingResetEmail = "";
+    let charts = {};
+    let currentRatingValue = 5;
+
+    // Toast Alert Notification System
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+      toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-msg">${message}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(50px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Drag-and-Drop Image Handlers
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (file) {
+        renderImageThumbnail(file);
+      }
+    }
+
+    function renderImageThumbnail(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('preview-name').innerText = file.name;
+        document.getElementById('preview-size').innerText = (file.size / 1024).toFixed(1) + " KB";
+        document.getElementById('preview-box').style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPhotoSelection() {
+      document.getElementById('problem-image').value = "";
+      document.getElementById('preview-box').style.display = 'none';
+      document.getElementById('preview-img').src = "";
+    }
+
+    // Drag and drop events
+    const dropzone = document.getElementById('dropzone');
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = '#f87171';
+        });
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.style.borderColor = 'rgba(158, 54, 58, 0.45)';
+        });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          document.getElementById('problem-image').files = files;
+          renderImageThumbnail(files[0]);
+        }
+      });
+    }
+
+    window.onload = async () => {
+      const statusText = document.getElementById('splash-status-text');
+      setTimeout(() => { statusText.innerText = "AUTHENTICATING CAMPUS SERVICES..."; }, 700);
+      setTimeout(() => { statusText.innerText = "SYNCHRONIZING INCIDENT REPOSITORY..."; }, 1400);
+
+      setTimeout(async () => {
+        const splash = document.getElementById('welcome-splash');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(() => { splash.style.display = 'none'; }, 800);
+        }
+        await checkSession();
+      }, 2100);
+    };
+
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.logged_in) {
+          currentUser = data.user;
+        } else {
+          currentUser = null;
+        }
+      } catch (err) {
+        currentUser = null;
+      }
+      renderAuthState();
+    }
+
+    function renderAuthState() {
+      if (currentUser) {
+        document.getElementById('unauth-menu').style.display = 'none';
+        document.getElementById('auth-menu').style.display = 'flex';
+        
+        const displayLabel = currentUser.role === 'admin' 
+          ? currentUser.name 
+          : `${currentUser.name} (${currentUser.scholar_no})`;
+        
+        document.getElementById('user-display-name').innerText = displayLabel;
+        document.getElementById('user-display-role').innerText = currentUser.role;
+
+        if (currentUser.role === 'admin') {
+          document.getElementById('nav-reports').style.display = 'block';
+          document.getElementById('board-title').innerText = 'Admin Incident Board (All Complaints)';
+          document.getElementById('board-desc').innerText = 'Central overview of all campus breakdown reports';
+        } else {
+          document.getElementById('reg-student-info').innerText = `${currentUser.name} · ${currentUser.scholar_no} (${currentUser.dept})`;
+          document.getElementById('nav-reports').style.display = 'none';
+          document.getElementById('board-title').innerText = 'My Submitted Complaints';
+          document.getElementById('board-desc').innerText = `Viewing complaints filed under Scholar Number: ${currentUser.scholar_no}`;
+        }
+      } else {
+        document.getElementById('unauth-menu').style.display = 'flex';
+        document.getElementById('auth-menu').style.display = 'none';
+        document.getElementById('nav-reports').style.display = 'none';
+      }
+    }
+
+    // Modal Handlers with Sign-In Guidance
+    function openModal(type) {
+      closeModals();
+      if (type === 'register' && !currentUser) {
+        showToast("Please sign in first with your account.", "info");
+        openStudentLogin();
+        return;
+      }
+      const target = document.getElementById(`modal-${type}`);
+      if (target) target.style.display = 'flex';
+    }
+
+    function openStudentLogin() {
+      closeModals();
+      document.getElementById('modal-student-login').style.display = 'flex';
+    }
+
+    function openAdminModal() {
+      closeModals();
+      document.getElementById('modal-admin-login').style.display = 'flex';
+    }
+
+    function openForgotPasswordModal() {
+      closeModals();
+      resetForgotModal();
+      document.getElementById('modal-forgot-password').style.display = 'flex';
+    }
+
+    function resetForgotModal() {
+      document.getElementById('form-forgot-request').style.display = 'block';
+      document.getElementById('form-forgot-verify').style.display = 'none';
+      document.getElementById('form-forgot-request').reset();
+      document.getElementById('form-forgot-verify').reset();
+      pendingResetEmail = "";
+    }
+
+    function closeModals() {
+      document.querySelectorAll('.modal-overlay').forEach(el => el.style.display = 'none');
+    }
+
+    function viewImage(imgPath) {
+      document.getElementById('lightbox-img').src = `/static/uploads/${imgPath}`;
+      document.getElementById('modal-image-view').style.display = 'flex';
+    }
+
+    // Floating Report Issue Handler
+    function handleReportIssueClick() {
+      if (!currentUser) {
+        showToast("Please sign in first to report an issue.", "info");
+        openStudentLogin();
+      } else if (currentUser.role === 'admin') {
+        showTab('tickets');
+      } else {
+        showTab('register');
+      }
+    }
+
+    // --- REGISTRATION ---
+
+    async function handleInitiateSignup(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById('btn-signup-submit');
+      const pwd = document.getElementById('signup-password').value;
+      const confirmPwd = document.getElementById('signup-confirm-password').value;
+      const scholar = document.getElementById('signup-scholar-no').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+
+      if (!/^\d{6}$/.test(scholar)) {
+        showToast("Scholar Number must contain exactly 6 digits.", "error");
+        return;
+      }
+
+      if (pwd !== confirmPwd) {
+        showToast("Passwords do not match.", "error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Sending Verification OTP...";
+
+      const payload = {
+        name: document.getElementById('signup-name').value,
+        email: email,
+        scholar_no: scholar,
+        department: document.getElementById('signup-dept').value,
+        password: pwd,
+        confirm_password: confirmPwd
+      };
+
+      try {
+        const res = await fetch('/api/auth/send-registration-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Send Verification OTP";
+
+        if (data.success) {
+          pendingVerificationEmail = email;
+          document.getElementById('otp-target-email').innerText = email;
+          document.getElementById('otp-input').value = "";
+          closeModals();
+          document.getElementById('modal-otp-verify').style.display = 'flex';
+          showToast(data.message, "success");
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Send Verification OTP";
+        showToast("Server error requesting verification OTP.", "error");
+      }
+    }
+
+    async function handleVerifyOtp(e) {
+      e.preventDefault();
+      const otpVal = document.getElementById('otp-input').value.trim();
+
+      if (!/^\d{6}$/.test(otpVal)) {
+        showToast("Please enter the complete 6-digit OTP.", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/verify-registration-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            email: pendingVerificationEmail,
+            otp: otpVal
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "success");
+          currentUser = data.user;
+          renderAuthState();
+          closeModals();
+          document.getElementById('ticketForm').reset();
+          clearPhotoSelection();
+          showTab('register');
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error verifying OTP.", "error");
+      }
+    }
+
+    // --- FORGOT PASSWORD ---
+
+    async function handleRequestResetOtp(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-request-reset');
+      const scholar = document.getElementById('reset-scholar-no').value.trim();
+      const email = document.getElementById('reset-email').value.trim();
+
+      if (!/^\d{6}$/.test(scholar)) {
+        showToast("Scholar Number must be exactly 6 digits.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "Dispatching OTP...";
+
+      try {
+        const res = await fetch('/api/auth/forgot-password-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ scholar_no: scholar, email: email })
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerText = "Send Reset OTP";
+
+        if (data.success) {
+          showToast(data.message, "success");
+          pendingResetEmail = email;
+          document.getElementById('form-forgot-request').style.display = 'none';
+          document.getElementById('form-forgot-verify').style.display = 'block';
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = "Send Reset OTP";
+        showToast("Error requesting reset OTP.", "error");
+      }
+    }
+
+    async function handleFinalizeReset(e) {
+      e.preventDefault();
+      const otpVal = document.getElementById('reset-otp-input').value.trim();
+      const newPwd = document.getElementById('reset-new-password').value;
+      const confirmPwd = document.getElementById('reset-confirm-new-password').value;
+
+      if (!/^\d{6}$/.test(otpVal)) {
+        showToast("Please enter the complete 6-digit OTP code.", "error");
+        return;
+      }
+
+      if (newPwd !== confirmPwd) {
+        showToast("Passwords do not match.", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/verify-reset-password', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            email: pendingResetEmail,
+            otp: otpVal,
+            new_password: newPwd,
+            confirm_password: confirmPwd
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "success");
+          currentUser = data.user;
+          renderAuthState();
+          closeModals();
+          document.getElementById('ticketForm').reset();
+          clearPhotoSelection();
+          showTab('tickets');
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error verifying reset OTP.", "error");
+      }
+    }
+
+    // --- STANDARD LOGIN & NAVIGATION ---
+
+    async function handleStudentLoginSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        identifier: document.getElementById('student-login-identifier').value,
+        password: document.getElementById('student-login-password').value,
+        type: "student"
+      };
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = data.user;
+          renderAuthState();
+          closeModals();
+          document.getElementById('ticketForm').reset();
+          clearPhotoSelection();
+          showTab('register');
+          showToast(`Welcome back, ${currentUser.name}!`, "success");
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error during login.", "error");
+      }
+    }
+
+    async function handleAdminLoginSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        identifier: document.getElementById('admin-login-email').value,
+        password: document.getElementById('admin-login-password').value,
+        type: "admin"
+      };
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = data.user;
+          renderAuthState();
+          closeModals();
+          showTab('tickets');
+          showToast("Admin session authenticated.", "success");
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error during admin login.", "error");
+      }
+    }
+
+    async function handleLogout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      currentUser = null;
+      renderAuthState();
+      document.getElementById('ticketForm').reset();
+      clearPhotoSelection();
+      showTab('dashboard');
+      showToast("Signed out successfully.");
+    }
+
+    function checkRoleToAct() {
+      if (!currentUser) {
+        showToast("Please sign in to access the portal.", "info");
+        openStudentLogin();
+      } else if (currentUser.role === 'admin') {
+        showTab('tickets');
+      } else {
+        showTab('register');
+      }
+    }
+
+    function showTab(tabId) {
+      if ((tabId === 'register' || tabId === 'tickets') && !currentUser) {
+        showToast("Please sign in first to access this section.", "info");
+        openStudentLogin();
+        return;
+      }
+      if (tabId === 'reports' && (!currentUser || currentUser.role !== 'admin')) {
+        showToast("Restricted: College Administrator credentials required.", "error");
+        openAdminModal();
+        return;
+      }
+
+      document.querySelectorAll('.section-tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add('active');
+
+      const btn = Array.from(document.querySelectorAll('.nav-link')).find(b => b.textContent.toLowerCase().includes(tabId.toLowerCase()));
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'tickets') loadTickets();
+      if (tabId === 'reports') loadReports();
+    }
+
+    // --- COMPLAINTS, DELETE & FEEDBACK ---
+
+    async function handleRegisterComplaint(e) {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("building", document.getElementById('building').value);
+      formData.append("room", document.getElementById('room').value.trim());
+      formData.append("category", document.getElementById('cat').value);
+      formData.append("priority", document.getElementById('priority').value);
+      formData.append("problem", document.getElementById('problem').value);
+
+      const fileInput = document.getElementById('problem-image');
+      if (fileInput.files.length > 0) {
+        formData.append("image", fileInput.files[0]);
+      }
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Complaint [${data.complaint_id}] Registered! Confirmation email dispatched.`, "success");
+          document.getElementById('ticketForm').reset();
+          clearPhotoSelection();
+          showTab('tickets');
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error registering complaint.", "error");
+      }
+    }
+
+    async function loadTickets() {
+      try {
+        const res = await fetch('/api/tickets');
+        const tickets = await res.json();
+        const tbody = document.getElementById('ticketsBody');
+        if (!tickets || tickets.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-leaf); padding:3rem;">No tickets on record. Click "Register Ticket" to submit one.</td></tr>`;
+          return;
+        }
+
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        document.getElementById('th-action').style.display = 'table-cell';
+
+        tbody.innerHTML = tickets.map(t => {
+          let actionCell = '';
+
+          if (isAdmin) {
+            actionCell = `
+              <div style="display:flex; align-items:center;">
+                <select onchange="updateStatus('${t.complaint_id}', this.value)" style="padding:6px 10px; font-size:0.85rem; background:#081a2e; border-radius:8px;">
+                  <option value="">Update...</option>
+                  <option value="Pending" ${t.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                  <option value="In Progress" ${t.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="Resolved" ${t.status === 'Resolved' ? 'selected' : ''}>Resolved (Finished)</option>
+                </select>
+                <button class="btn-delete-ticket" title="Delete Ticket" onclick="handleDeleteTicket('${t.complaint_id}')">🗑️ Delete</button>
+              </div>
+            `;
+          } else {
+            if (t.status === 'Resolved') {
+              if (t.rating) {
+                actionCell = `<span style="color:#fca5a5; font-weight:800; font-size:0.95rem;">${'★'.repeat(t.rating)}</span>`;
+              } else {
+                actionCell = `<button class="btn-feedback" onclick="openFeedbackModal('${t.complaint_id}')">Rate Service</button>`;
+              }
+            } else {
+              actionCell = `<span style="color:var(--text-muted); font-size:0.82rem;">In Process</span>`;
+            }
+          }
+
+          const statusClass = t.status.replace(" ", "");
+
+          return `
+            <tr>
+              <td style="font-weight:900; color:#f87171;">${t.complaint_id}</td>
+              <td>
+                <b style="color:#fff;">${t.student_name}</b><br>
+                <small style="color:#93c5fd">Scholar: ${t.student_scholar_no}</small> | 
+                <small style="color:var(--text-leaf)">${t.student_email}</small>
+              </td>
+              <td>
+                <b style="color:#fff;">${t.building}</b><br>
+                <span style="color:#fca5a5; font-size:0.85rem; font-weight:700;">Room: ${t.room_no || 'N/A'}</span><br>
+                <small style="color:var(--text-muted); opacity:0.85;">(${t.department})</small>
+              </td>
+              <td>${t.category}</td>
+              <td>${t.priority}</td>
+              <td>
+                ${t.image_path ? `
+                  <button class="img-preview-btn" onclick="viewImage('${t.image_path}')">View Photo</button>
+                ` : `<span style="color:var(--text-muted); font-size:0.82rem;">No Photo</span>`}
+              </td>
+              <td>
+                <span class="status-badge status-${statusClass}">
+                  <span class="status-dot-pulse"></span>
+                  ${t.status}
+                </span>
+              </td>
+              <td>${t.date}</td>
+              <td>${actionCell}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Error loading tickets:", err);
+      }
+    }
+
+    async function updateStatus(cmpId, newStat) {
+      if (!newStat) return;
+
+      try {
+        const res = await fetch('/api/update_status', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ complaint_id: cmpId, status: newStat })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Ticket ${cmpId} updated to: ${newStat}`, "success");
+          loadTickets();
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error updating ticket status.", "error");
+      }
+    }
+
+    async function handleDeleteTicket(cmpId) {
+      if (!confirm(`Are you sure you want to permanently delete ticket ${cmpId}?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/delete_ticket/${cmpId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "success");
+          loadTickets();
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error deleting ticket.", "error");
+      }
+    }
+
+    function openFeedbackModal(cmpId) {
+      document.getElementById('feedback-cmp-id').value = cmpId;
+      document.getElementById('feedback-ticket-id').innerText = cmpId;
+      document.getElementById('feedback-comment').value = '';
+      setRating(5);
+      closeModals();
+      document.getElementById('modal-feedback').style.display = 'flex';
+    }
+
+    function setRating(val) {
+      currentRatingValue = val;
+      document.getElementById('selected-rating-val').value = val;
+      const stars = document.querySelectorAll('#star-rating-container .star-btn');
+      stars.forEach((star, idx) => {
+        if (idx < val) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+    }
+
+    async function handleSendFeedback(e) {
+      e.preventDefault();
+      const payload = {
+        complaint_id: document.getElementById('feedback-cmp-id').value,
+        rating: parseInt(document.getElementById('selected-rating-val').value),
+        feedback: document.getElementById('feedback-comment').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/submit_feedback', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "success");
+          closeModals();
+          loadTickets();
+        } else {
+          showToast(data.message, "error");
+        }
+      } catch (err) {
+        showToast("Server error submitting feedback.", "error");
+      }
+    }
+
+    function filterTickets() {
+      const q = document.getElementById('searchBox').value.toLowerCase();
+      document.querySelectorAll('#ticketsBody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
+
+    async function loadReports() {
+      try {
+        const res = await fetch('/api/analytics');
+        const data = await res.json();
+        
+        document.getElementById('m-total').innerText = data.metrics.total;
+        document.getElementById('m-pending').innerText = data.metrics.pending;
+        document.getElementById('m-inprog').innerText = data.metrics.in_progress;
+        document.getElementById('m-resolved').innerText = data.metrics.resolved;
+        document.getElementById('m-rating').innerText = data.metrics.avg_rating || "N/A";
+        document.getElementById('m-cat').innerText = data.metrics.top_category;
+
+        renderCharts(data.charts);
+      } catch (err) {
+        console.error("Error loading reports:", err);
+      }
+    }
+
+    function renderCharts(cData) {
+      Chart.defaults.color = '#a4b3c6';
+      Chart.defaults.font.size = 13;
+      Chart.defaults.borderColor = 'rgba(79, 95, 118, 0.2)';
+
+      const hasData = Object.keys(cData.categories).length > 0;
+
+      if (charts.cat) charts.cat.destroy();
+      charts.cat = new Chart(document.getElementById('catChart'), {
+        type: 'bar',
+        data: {
+          labels: hasData ? Object.keys(cData.categories) : ['No Data'],
+          datasets: [{ 
+            label: 'Complaints by Category', 
+            data: hasData ? Object.values(cData.categories) : [0], 
+            backgroundColor: '#9e363a', 
+            borderRadius: 6 
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Complaints by Category', color: '#ffffff', font: { size: 16, weight: 'bold' } } } }
+      });
+
+      if (charts.status) charts.status.destroy();
+      charts.status = new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Pending', 'In Progress', 'Resolved'],
+          datasets: [{ 
+            data: [cData.status.Pending, cData.status["In Progress"], cData.status.Resolved], 
+            backgroundColor: ['#9e363a', '#0f2862', '#4f5f76'], 
+            borderWidth: 0 
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Status Distribution', color: '#ffffff', font: { size: 16, weight: 'bold' } } } }
+      });
+
+      if (charts.bld) charts.bld.destroy();
+      charts.bld = new Chart(document.getElementById('bldChart'), {
+        type: 'bar',
+        data: {
+          labels: hasData ? Object.keys(cData.buildings) : ['No Data'],
+          datasets: [{ 
+            label: 'Complaints by Location', 
+            data: hasData ? Object.values(cData.buildings) : [0], 
+            backgroundColor: '#0f2862', 
+            borderRadius: 6 
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Complaints by Location', color: '#ffffff', font: { size: 16, weight: 'bold' } } } }
+      });
+
+      if (charts.month) charts.month.destroy();
+      charts.month = new Chart(document.getElementById('monthChart'), {
+        type: 'line',
+        data: {
+          labels: hasData ? Object.keys(cData.months) : ['No Data'],
+          datasets: [{ 
+            label: 'Tickets Reported Per Month', 
+            data: hasData ? Object.values(cData.months) : [0], 
+            borderColor: '#9e363a', 
+            backgroundColor: 'rgba(158, 54, 58, 0.18)', 
+            fill: true, 
+            tension: 0.35, 
+            borderWidth: 2.5 
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Monthly Ticket Timeline', color: '#ffffff', font: { size: 16, weight: 'bold' } } } }
+      });
+    }
+  </script>
+</body>
+</html>
