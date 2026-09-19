@@ -347,7 +347,7 @@ def verify_reset_password():
     session["user"] = user_data
     return jsonify({"success": True, "message": "Password updated successfully!", "user": user_data})
 
-# --- Ticket Operations (Base64 Image Persistence) ---
+# --- Ticket Operations (Sequential CMP IDs & Base64 Image Persistence) ---
 
 @app.route("/api/register", methods=["POST"])
 def register_complaint():
@@ -370,11 +370,25 @@ def register_complaint():
             mime_type = image_file.mimetype or "image/jpeg"
             image_data_uri = f"data:{mime_type};base64,{b64_encoded}"
 
-    complaint_id = f"CMP{random.randint(1000, 9999)}"
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-
     conn = get_db()
     cursor = conn.cursor()
+
+    # Determine next sequential complaint ID (CMP001, CMP002, ...)
+    cursor.execute("SELECT complaint_id FROM tickets WHERE complaint_id LIKE 'CMP%' ORDER BY id DESC LIMIT 1")
+    last_row = cursor.fetchone()
+
+    next_num = 1
+    if last_row and last_row["complaint_id"]:
+        try:
+            raw_id = last_row["complaint_id"].replace("CMP", "")
+            next_num = int(raw_id) + 1
+        except ValueError:
+            cursor.execute("SELECT COUNT(*) as cnt FROM tickets")
+            next_num = cursor.fetchone()["cnt"] + 1
+
+    complaint_id = f"CMP{next_num:03d}"
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
     cursor.execute("""
         INSERT INTO tickets (
             complaint_id, student_name, student_scholar_no, student_email,
