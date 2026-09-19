@@ -226,7 +226,7 @@
       font-weight: 600;
     }
 
-    /* --- EXPANDED CLEAN HEADER --- */
+    /* --- NAVIGATION --- */
     header {
       border-bottom: 1px solid var(--border-subtle);
       background: rgba(9, 31, 54, 0.94);
@@ -304,25 +304,24 @@
       color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; text-transform: uppercase; font-weight: 900;
     }
 
-    /* --- RESPONSIVE MAIN CONTAINER --- */
+    /* --- TOP-ALIGNED MAIN CONTAINER --- */
     main { 
-      max-width: 1560px; 
+      max-width: 1400px; 
       width: 100%; 
       margin: 0 auto; 
-      padding: clamp(2rem, 4vh, 4rem) clamp(1.8rem, 4.5vw, 5.5rem); 
+      padding: 2.5rem 2rem 5rem; 
       flex-grow: 1; 
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
     }
     .section-tab { display: none; }
     .section-tab.active { display: block; animation: tabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     @keyframes tabFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Hero Section */
     .hero-container {
       display: grid; 
       grid-template-columns: 1.15fr 0.85fr;
       align-items: center; 
+      min-height: calc(75vh - 80px);
       gap: clamp(2.5rem, 5.5vw, 6rem);
       width: 100%;
     }
@@ -334,51 +333,51 @@
       background: rgba(158, 54, 58, 0.15); 
       color: #fca5a5;
       border: 1px solid var(--border-accent);
-      padding: 9px 20px; 
-      border-radius: 28px; 
-      font-size: 0.88rem;
+      padding: 8px 18px; 
+      border-radius: 24px; 
+      font-size: 0.85rem;
       font-weight: 800; 
-      letter-spacing: 1.8px; 
-      margin-bottom: 2rem;
+      letter-spacing: 1.5px; 
+      margin-bottom: 1.8rem;
       width: fit-content;
     }
     .hero-dot { width: 8px; height: 8px; background: #f87171; border-radius: 50%; box-shadow: 0 0 10px #f87171; }
     
     .hero-heading {
       font-family: 'Cabinet Grotesk', sans-serif;
-      font-size: clamp(3.2rem, 5.2vw, 4.8rem);
+      font-size: clamp(3rem, 5vw, 4.5rem);
       font-weight: 900; 
       line-height: 1.05;
       letter-spacing: -1.2px; 
       text-transform: uppercase; 
-      margin-bottom: 2.2rem;
+      margin-bottom: 1.8rem;
     }
     .hero-heading span.neon { color: #f87171; text-shadow: 0 0 30px var(--accent-redline-glow); }
     
     .hero-desc { 
-      font-size: clamp(1.05rem, 1.25vw, 1.2rem); 
+      font-size: clamp(1rem, 1.2vw, 1.15rem); 
       color: var(--text-leaf); 
-      line-height: 1.75; 
-      max-width: 660px; 
-      margin-bottom: 2.8rem; 
+      line-height: 1.7; 
+      max-width: 620px; 
+      margin-bottom: 2.2rem; 
     }
     
     .hero-btns { 
       display: flex; 
-      gap: 18px; 
+      gap: 16px; 
       flex-wrap: wrap;
     }
     .btn-primary {
       background: linear-gradient(135deg, var(--color-redline), #b53e43); color: #ffffff; font-weight: 800;
-      font-size: 1.1rem; border: none; padding: 15px 32px; border-radius: 12px;
-      cursor: pointer; box-shadow: 0 0 22px var(--accent-redline-glow);
+      font-size: 1.05rem; border: none; padding: 14px 28px; border-radius: 10px;
+      cursor: pointer; box-shadow: 0 0 20px var(--accent-redline-glow);
       transition: all 0.2s ease;
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(158, 54, 58, 0.7); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 28px rgba(158, 54, 58, 0.7); }
     .btn-ghost {
       background: rgba(79, 95, 118, 0.15); color: var(--text-frost);
       border: 1px solid var(--border-subtle); font-weight: 700;
-      font-size: 1.1rem; padding: 15px 32px; border-radius: 12px; cursor: pointer;
+      font-size: 1.05rem; padding: 14px 28px; border-radius: 10px; cursor: pointer;
       transition: all 0.2s ease;
     }
     .btn-ghost:hover { background: rgba(79, 95, 118, 0.3); border-color: var(--text-leaf); color: #fff; }
@@ -386,10 +385,10 @@
     /* Interactive Map Graphic */
     .map-canvas {
       position: relative; 
-      height: clamp(440px, 50vh, 520px); 
+      height: clamp(420px, 48vh, 500px); 
       width: 100%;
       border: 1px solid var(--border-subtle); 
-      border-radius: 22px;
+      border-radius: 20px;
       background: var(--bg-card); 
       backdrop-filter: blur(14px);
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
@@ -1248,7 +1247,12 @@
     }
 
     function viewImage(imgPath) {
-      document.getElementById('lightbox-img').src = `/static/uploads/${imgPath}`;
+      const modalImg = document.getElementById('lightbox-img');
+      if (imgPath.startsWith('data:') || imgPath.startsWith('http')) {
+        modalImg.src = imgPath;
+      } else {
+        modalImg.src = `/static/uploads/${imgPath}`;
+      }
       document.getElementById('modal-image-view').style.display = 'flex';
     }
 
@@ -1466,7 +1470,7 @@
           closeModals();
           document.getElementById('ticketForm').reset();
           clearPhotoSelection();
-          showTab('register');
+          showTab('tickets');
           showToast(`Welcome back, ${currentUser.name}!`, "success");
         } else {
           showToast(data.message, "error");
@@ -1644,7 +1648,7 @@
               <td>${t.priority}</td>
               <td>
                 ${t.image_path ? `
-                  <button class="img-preview-btn" onclick="viewImage('${t.image_path}')">View Photo</button>
+                  <button class="img-preview-btn" onclick='viewImage(${JSON.stringify(t.image_path)})'>View Photo</button>
                 ` : `<span style="color:var(--text-muted); font-size:0.82rem;">No Photo</span>`}
               </td>
               <td>
