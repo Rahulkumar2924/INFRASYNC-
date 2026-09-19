@@ -3,6 +3,7 @@ import sqlite3
 import random
 import smtplib
 import json
+import base64
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -26,7 +27,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "rahulkumarpandu7@gmail.com")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD", "oyan wbkv zkfs nerw")
 
-# Writable paths for both local and serverless deployments
+# Writable database path for local and serverless environments
 if os.environ.get("VERCEL"):
     DB_PATH = "/tmp/campus.db"
     UPLOAD_FOLDER = "/tmp/uploads"
@@ -189,7 +190,7 @@ def auth_logout():
     session.clear()
     return jsonify({"success": True})
 
-# --- Student Registration with SQLite-Backed OTP ---
+# --- Student Registration with Persistent SQLite OTP ---
 
 @app.route("/api/auth/send-registration-otp", methods=["POST"])
 def send_registration_otp():
@@ -346,7 +347,7 @@ def verify_reset_password():
     session["user"] = user_data
     return jsonify({"success": True, "message": "Password updated successfully!", "user": user_data})
 
-# --- Ticket Operations ---
+# --- Ticket Operations (Base64 Image Persistence) ---
 
 @app.route("/api/register", methods=["POST"])
 def register_complaint():
@@ -361,11 +362,13 @@ def register_complaint():
     problem = request.form.get("problem")
 
     image_file = request.files.get("image")
-    image_filename = ""
+    image_data_uri = ""
     if image_file and image_file.filename:
-        safe_name = f"{random.randint(10000, 99999)}_{image_file.filename.replace(' ', '_')}"
-        image_file.save(os.path.join(UPLOAD_FOLDER, safe_name))
-        image_filename = safe_name
+        file_bytes = image_file.read()
+        if file_bytes:
+            b64_encoded = base64.b64encode(file_bytes).decode("utf-8")
+            mime_type = image_file.mimetype or "image/jpeg"
+            image_data_uri = f"data:{mime_type};base64,{b64_encoded}"
 
     complaint_id = f"CMP{random.randint(1000, 9999)}"
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -381,7 +384,7 @@ def register_complaint():
     """, (
         complaint_id, u["name"], u["scholar_no"], u["email"],
         u["department"], building, room, category, priority,
-        problem, image_filename, now_str
+        problem, image_data_uri, now_str
     ))
     conn.commit()
     conn.close()
