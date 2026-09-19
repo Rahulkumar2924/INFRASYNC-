@@ -26,118 +26,136 @@ SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "rahulkumarpandu7@gmail.com")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD", "oyan wbkv zkfs nerw")
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:[CampusSync@2026]@db.xxouzdaavrtajpzlljjj.supabase.co:5432/postgres").strip()
 
-# Adjust postgres URI format if necessary for psycopg2
+# Use pooler URL if set, otherwise fallback to empty string
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres.xxouzdaavrtajpzlljjj:Campusfix2026@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+).strip()
+
+# Adjust postgres URI prefix for psycopg2 compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Local fallback SQLite path
+if os.environ.get("VERCEL"):
+    DB_PATH = "/tmp/campus.db"
+    UPLOAD_FOLDER = "/tmp/uploads"
+else:
+    DB_PATH = os.path.join(os.path.dirname(__file__), "data", "campus.db")
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "uploads")
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 IS_PG = bool(DATABASE_URL)
 
-if not IS_PG:
-    if os.environ.get("VERCEL"):
-        DB_PATH = "/tmp/campus.db"
-    else:
-        DB_PATH = os.path.join(os.path.dirname(__file__), "data", "campus.db")
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
 if IS_PG:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        IS_PG = False
 
 def get_db():
-    if IS_PG:
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-        return conn
-    else:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return conn
+    global IS_PG
+    if IS_PG and DATABASE_URL:
+        try:
+            conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=5)
+            return conn, True
+        except Exception as e:
+            print(f"[DB Notice] PostgreSQL connection failed: {e}. Falling back to SQLite.")
+            
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn, False
 
 def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    if IS_PG:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255),
-                email VARCHAR(255) UNIQUE,
-                scholar_no VARCHAR(50) UNIQUE,
-                department VARCHAR(255),
-                password VARCHAR(255),
-                role VARCHAR(50) DEFAULT 'student',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS otps (
-                email VARCHAR(255) PRIMARY KEY,
-                otp VARCHAR(10),
-                payload TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS tickets (
-                id SERIAL PRIMARY KEY,
-                complaint_id VARCHAR(50) UNIQUE,
-                student_name VARCHAR(255),
-                student_scholar_no VARCHAR(50),
-                student_email VARCHAR(255),
-                department VARCHAR(255),
-                building VARCHAR(255),
-                room_no VARCHAR(50),
-                category VARCHAR(100),
-                priority VARCHAR(50),
-                problem TEXT,
-                image_path TEXT,
-                status VARCHAR(50) DEFAULT 'Pending',
-                rating INTEGER DEFAULT NULL,
-                feedback TEXT DEFAULT NULL,
-                date VARCHAR(50)
-            );
-        """)
-    else:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                email TEXT UNIQUE,
-                scholar_no TEXT UNIQUE,
-                department TEXT,
-                password TEXT,
-                role TEXT DEFAULT 'student',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS otps (
-                email TEXT PRIMARY KEY,
-                otp TEXT,
-                payload TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tickets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                complaint_id TEXT UNIQUE,
-                student_name TEXT,
-                student_scholar_no TEXT,
-                student_email TEXT,
-                department TEXT,
-                building TEXT,
-                room_no TEXT,
-                category TEXT,
-                priority TEXT,
-                problem TEXT,
-                image_path TEXT,
-                status TEXT DEFAULT 'Pending',
-                rating INTEGER DEFAULT NULL,
-                feedback TEXT DEFAULT NULL,
-                date TEXT
-            )
-        """)
-    conn.commit()
-    conn.close()
+    try:
+        conn, is_postgres = get_db()
+        cursor = conn.cursor()
+        if is_postgres:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255),
+                    email VARCHAR(255) UNIQUE,
+                    scholar_no VARCHAR(50) UNIQUE,
+                    department VARCHAR(255),
+                    password VARCHAR(255),
+                    role VARCHAR(50) DEFAULT 'student',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS otps (
+                    email VARCHAR(255) PRIMARY KEY,
+                    otp VARCHAR(10),
+                    payload TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS tickets (
+                    id SERIAL PRIMARY KEY,
+                    complaint_id VARCHAR(50) UNIQUE,
+                    student_name VARCHAR(255),
+                    student_scholar_no VARCHAR(50),
+                    student_email VARCHAR(255),
+                    department VARCHAR(255),
+                    building VARCHAR(255),
+                    room_no VARCHAR(50),
+                    category VARCHAR(100),
+                    priority VARCHAR(50),
+                    problem TEXT,
+                    image_path TEXT,
+                    status VARCHAR(50) DEFAULT 'Pending',
+                    rating INTEGER DEFAULT NULL,
+                    feedback TEXT DEFAULT NULL,
+                    date VARCHAR(50)
+                );
+            """)
+        else:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    email TEXT UNIQUE,
+                    scholar_no TEXT UNIQUE,
+                    department TEXT,
+                    password TEXT,
+                    role TEXT DEFAULT 'student',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS otps (
+                    email TEXT PRIMARY KEY,
+                    otp TEXT,
+                    payload TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tickets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    complaint_id TEXT UNIQUE,
+                    student_name TEXT,
+                    student_scholar_no TEXT,
+                    student_email TEXT,
+                    department TEXT,
+                    building TEXT,
+                    room_no TEXT,
+                    category TEXT,
+                    priority TEXT,
+                    problem TEXT,
+                    image_path TEXT,
+                    status TEXT DEFAULT 'Pending',
+                    rating INTEGER DEFAULT NULL,
+                    feedback TEXT DEFAULT NULL,
+                    date TEXT
+                )
+            """)
+        conn.commit()
+        conn.close()
+    except Exception as ex:
+        print(f"[Init Error] DB Schema init failed: {ex}")
 
 init_db()
 
@@ -151,7 +169,7 @@ def send_email_notification(to_email, subject, body_text):
         msg["Subject"] = subject
         msg.attach(MIMEText(body_text, "plain"))
 
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=8)
         server.starttls()
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
@@ -174,6 +192,10 @@ def login():
 @app.route("/signup")
 def signup():
     return redirect(url_for("index"))
+
+@app.route("/static/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 # --- Authentication APIs ---
 
@@ -203,9 +225,9 @@ def auth_login():
             return jsonify({"success": True, "user": user_data})
         return jsonify({"success": False, "message": "Invalid Administrator credentials."})
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"""
         SELECT * FROM users 
         WHERE (scholar_no = {ph} OR lower(email) = lower({ph})) AND password = {ph}
@@ -239,9 +261,9 @@ def send_registration_otp():
     email = data.get("email", "").strip().lower()
     scholar = data.get("scholar_no", "").strip()
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"SELECT id FROM users WHERE lower(email) = {ph} OR scholar_no = {ph}", (email, scholar))
     existing = cursor.fetchone()
 
@@ -252,7 +274,7 @@ def send_registration_otp():
     otp = str(random.randint(100000, 999999))
     payload_str = json.dumps(data)
 
-    if IS_PG:
+    if is_pg:
         cursor.execute("""
             INSERT INTO otps (email, otp, payload)
             VALUES (%s, %s, %s)
@@ -289,9 +311,9 @@ def verify_registration_otp():
     email = data.get("email", "").strip().lower()
     entered_otp = data.get("otp", "").strip()
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"SELECT otp, payload FROM otps WHERE lower(email) = {ph}", (email,))
     record = cursor.fetchone()
 
@@ -332,9 +354,9 @@ def forgot_password_otp():
     email = data.get("email", "").strip().lower()
     scholar = data.get("scholar_no", "").strip()
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"SELECT id FROM users WHERE lower(email) = {ph} AND scholar_no = {ph}", (email, scholar))
     user = cursor.fetchone()
 
@@ -343,7 +365,7 @@ def forgot_password_otp():
         return jsonify({"success": False, "message": "No student record matched those credentials."})
 
     otp = str(random.randint(100000, 999999))
-    if IS_PG:
+    if is_pg:
         cursor.execute("""
             INSERT INTO otps (email, otp, payload)
             VALUES (%s, %s, 'RESET')
@@ -369,7 +391,7 @@ Campus Support & Operations Hub"""
 
     sent = send_email_notification(email, "InfraSync Password Reset OTP", body)
     if not sent:
-        return jsonify({"success": False, "message": "Failed to dispatch reset OTP. Check SMTP settings."})
+        return jsonify({"success": False, "message": "Failed to dispatch reset OTP."})
 
     return jsonify({"success": True, "message": "Reset code sent to your registered email address."})
 
@@ -380,9 +402,9 @@ def verify_reset_password():
     entered_otp = data.get("otp", "").strip()
     new_pwd = data.get("new_password", "")
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"SELECT otp FROM otps WHERE lower(email) = {ph}", (email,))
     record = cursor.fetchone()
 
@@ -407,7 +429,7 @@ def verify_reset_password():
     session["user"] = user_data
     return jsonify({"success": True, "message": "Password updated successfully!", "user": user_data})
 
-# --- Ticket Operations (Sequential CMP IDs & Base64 Images) ---
+# --- Ticket Operations (Sequential CMP Numbers & Base64 Images) ---
 
 @app.route("/api/register", methods=["POST"])
 def register_complaint():
@@ -430,7 +452,7 @@ def register_complaint():
             mime_type = image_file.mimetype or "image/jpeg"
             image_data_uri = f"data:{mime_type};base64,{b64_encoded}"
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
 
     cursor.execute("SELECT complaint_id FROM tickets WHERE complaint_id LIKE 'CMP%' ORDER BY id DESC LIMIT 1")
@@ -439,7 +461,7 @@ def register_complaint():
     next_num = 1
     if last_row and last_row["complaint_id"]:
         try:
-            raw_id = last_row["complaint_id"].replace("CMP", "")
+            raw_id = str(last_row["complaint_id"]).replace("CMP", "")
             next_num = int(raw_id) + 1
         except ValueError:
             cursor.execute("SELECT COUNT(*) as cnt FROM tickets")
@@ -448,7 +470,7 @@ def register_complaint():
     complaint_id = f"CMP{next_num:03d}"
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"""
         INSERT INTO tickets (
             complaint_id, student_name, student_scholar_no, student_email,
@@ -483,10 +505,10 @@ def get_tickets():
     if "user" not in session:
         return jsonify([])
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
     u = session["user"]
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
 
     if u.get("role") == "admin":
         cursor.execute("SELECT * FROM tickets ORDER BY id DESC")
@@ -506,9 +528,9 @@ def update_status():
     cmp_id = data.get("complaint_id")
     status = data.get("status")
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"SELECT * FROM tickets WHERE complaint_id = {ph}", (cmp_id,))
     ticket = cursor.fetchone()
 
@@ -537,9 +559,9 @@ def delete_ticket(cmp_id):
     if "user" not in session or session["user"].get("role") != "admin":
         return jsonify({"success": False, "message": "Admin authorization required."})
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"DELETE FROM tickets WHERE complaint_id = {ph}", (cmp_id,))
     conn.commit()
     conn.close()
@@ -555,9 +577,9 @@ def submit_feedback():
     rating = data.get("rating")
     feedback = data.get("feedback", "")
 
-    conn = get_db()
+    conn, is_pg = get_db()
     cursor = conn.cursor()
-    ph = "%s" if IS_PG else "?"
+    ph = "%s" if is_pg else "?"
     cursor.execute(f"""
         UPDATE tickets SET rating = {ph}, feedback = {ph} 
         WHERE complaint_id = {ph} AND student_scholar_no = {ph}
@@ -566,21 +588,25 @@ def submit_feedback():
     conn.close()
     return jsonify({"success": True, "message": "Thank you for your rating!"})
 
-# --- Central Analytics & Export ---
+# --- Central Analytics & Master Export ---
 
 @app.route("/api/analytics")
 def analytics():
     if "user" not in session or session["user"].get("role") != "admin":
         return jsonify({"error": "Admin only"}), 403
 
-    conn = get_db()
-    if IS_PG:
-        from sqlalchemy import create_engine
-        engine = create_engine(DATABASE_URL)
-        df = pd.read_sql_table("tickets", con=engine)
-    else:
-        df = pd.read_sql_query("SELECT * FROM tickets", conn)
-    conn.close()
+    conn, is_pg = get_db()
+    try:
+        if is_pg:
+            from sqlalchemy import create_engine
+            engine = create_engine(DATABASE_URL)
+            df = pd.read_sql_table("tickets", con=engine)
+        else:
+            df = pd.read_sql_query("SELECT * FROM tickets", conn)
+    except Exception:
+        df = pd.DataFrame()
+    finally:
+        conn.close()
 
     if df.empty:
         return jsonify({
@@ -640,14 +666,18 @@ def export_csv():
     if "user" not in session or session["user"].get("role") != "admin":
         return "Admin access required", 403
 
-    conn = get_db()
-    if IS_PG:
-        from sqlalchemy import create_engine
-        engine = create_engine(DATABASE_URL)
-        df = pd.read_sql_table("tickets", con=engine)
-    else:
-        df = pd.read_sql_query("SELECT * FROM tickets", conn)
-    conn.close()
+    conn, is_pg = get_db()
+    try:
+        if is_pg:
+            from sqlalchemy import create_engine
+            engine = create_engine(DATABASE_URL)
+            df = pd.read_sql_table("tickets", con=engine)
+        else:
+            df = pd.read_sql_query("SELECT * FROM tickets", conn)
+    except Exception:
+        df = pd.DataFrame()
+    finally:
+        conn.close()
 
     csv_path = "/tmp/campus_tickets_master.csv" if os.environ.get("VERCEL") else "campus_tickets_master.csv"
     df.to_csv(csv_path, index=False)
