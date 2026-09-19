@@ -226,7 +226,7 @@
       font-weight: 600;
     }
 
-    /* --- CLEAN EXPANDED HEADER --- */
+    /* --- EXPANDED CLEAN HEADER --- */
     header {
       border-bottom: 1px solid var(--border-subtle);
       background: rgba(9, 31, 54, 0.94);
@@ -304,7 +304,7 @@
       color: #ffffff; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; text-transform: uppercase; font-weight: 900;
     }
 
-    /* --- CLEAN SCREEN-FILLING LAYOUT --- */
+    /* --- RESPONSIVE MAIN CONTAINER --- */
     main { 
       max-width: 1560px; 
       width: 100%; 
@@ -1213,14 +1213,8 @@
       }
     }
 
-    // Modal Handlers with Sign-In Guidance
     function openModal(type) {
       closeModals();
-      if (type === 'register' && !currentUser) {
-        showToast("Please sign in first with your account.", "info");
-        openStudentLogin();
-        return;
-      }
       const target = document.getElementById(`modal-${type}`);
       if (target) target.style.display = 'flex';
     }
